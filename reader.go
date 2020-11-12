@@ -207,7 +207,7 @@ func (c *Reader) Blob() []byte {
 // Discard the next value
 func (c *Reader) Discard() {
 	switch t := c.next().(type) {
-		case json.Delim: // one of [ ] { }
-			c.setError(fmt.Errorf("UNIMPLEMENTED json.Reader.Discard object (%q)", t))
+	case json.Delim: // one of [ ] { }
+		c.setError(fmt.Errorf("UNIMPLEMENTED json.Reader.Discard object (%q)", t))
 	}
 }
