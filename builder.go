@@ -134,6 +134,17 @@ func (e *Builder) KeyBytes(k []byte) {
 	}
 }
 
+// RawKey writes k verbatim without quotes and without escaping.
+// Thus, k is expected to be a valid JSON key already.
+func (e *Builder) RawKey(k []byte) {
+	e.startChunk(builderKey)
+	e.Write(k)
+	e.WriteByte(':')
+	if len(e.Indent) > 0 {
+		e.WriteByte(' ')
+	}
+}
+
 // StartObject starts a dictionary. Equivalent to Start('{')
 func (e *Builder) StartObject() { e.Start('{') }
 
