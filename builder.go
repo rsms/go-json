@@ -66,8 +66,9 @@ type Builder struct {
 	// Err holds the first error encountered, if any
 	Err error
 
-	// Indent enables pretty-printing
+	// pretty-printing
 	Indent string
+	KeyTerm []byte // key terminator. Defaults to ":"
 
 	// w         bytes.Buffer     // output JSON
 	state     builderState // most recently built thing
@@ -91,6 +92,15 @@ func (e *Builder) startChunk(nextstate builderState) {
 	case builderObj:
 		if len(e.Indent) > 0 {
 			e.writeNewLine()
+		}
+
+	case builderInit:
+		if e.KeyTerm == nil {
+			if len(e.Indent) > 0 {
+				e.KeyTerm = []byte{':',' '}
+			} else {
+				e.KeyTerm = []byte{':'}
+			}
 		}
 	}
 	e.state = nextstate
@@ -128,10 +138,7 @@ func (e *Builder) Key(k string) {
 func (e *Builder) KeyBytes(k []byte) {
 	e.startChunk(builderKey)
 	e.WriteJsonString(k)
-	e.WriteByte(':')
-	if len(e.Indent) > 0 {
-		e.WriteByte(' ')
-	}
+	e.Write(e.KeyTerm)
 }
 
 // RawKey writes k verbatim without quotes and without escaping.
@@ -139,10 +146,7 @@ func (e *Builder) KeyBytes(k []byte) {
 func (e *Builder) RawKey(k []byte) {
 	e.startChunk(builderKey)
 	e.Write(k)
-	e.WriteByte(':')
-	if len(e.Indent) > 0 {
-		e.WriteByte(' ')
-	}
+	e.Write(e.KeyTerm)
 }
 
 // StartObject starts a dictionary. Equivalent to Start('{')
