@@ -35,6 +35,7 @@ package json
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -42,6 +43,8 @@ import (
 )
 
 var hexdigits = "0123456789abcdef"
+
+const intSize int = 32 << (^uint(0) >> 63) // bits of int on target platform
 
 type builderState int
 
@@ -67,7 +70,7 @@ type Builder struct {
 	Err error
 
 	// pretty-printing
-	Indent string
+	Indent  string
 	KeyTerm []byte // key terminator. Defaults to ":"
 
 	// w         bytes.Buffer     // output JSON
@@ -97,7 +100,7 @@ func (e *Builder) startChunk(nextstate builderState) {
 	case builderInit:
 		if e.KeyTerm == nil {
 			if len(e.Indent) > 0 {
-				e.KeyTerm = []byte{':',' '}
+				e.KeyTerm = []byte{':', ' '}
 			} else {
 				e.KeyTerm = []byte{':'}
 			}
@@ -294,6 +297,56 @@ func (e *Builder) Float(f float64, bits int) {
 	e.Write(b)
 }
 
+func (e *Builder) Any(v interface{}) {
+	switch v := v.(type) {
+	case bool:
+		e.Bool(v)
+	case int:
+		e.Int(int64(v), intSize)
+	case int8:
+		e.Int(int64(v), 8)
+	case int16:
+		e.Int(int64(v), 16)
+	case int32:
+		e.Int(int64(v), 32)
+	case int64:
+		e.Int(v, 64)
+	case uint:
+		e.Uint(uint64(v), intSize)
+	case uint8:
+		e.Uint(uint64(v), 8)
+	case uint16:
+		e.Uint(uint64(v), 16)
+	case uint32:
+		e.Uint(uint64(v), 32)
+	case uint64:
+		e.Uint(v, 64)
+	case float32:
+		e.Float(float64(v), 32)
+	case float64:
+		e.Float(v, 64)
+	case string:
+		e.Str(v)
+	case []byte:
+		e.Blob(v)
+	default:
+		if v == nil {
+			e.Null()
+		} else if st, ok := v.(interface{ MarshalJSON() ([]byte, error) }); ok {
+			json, err := st.MarshalJSON()
+			if err != nil {
+				e.setError(err)
+			} else {
+				e.Raw(json)
+			}
+		} else {
+			e.startChunk(builderValue)
+			enc := json.NewEncoder(&e.Buffer)
+			e.setError(enc.Encode(v))
+		}
+	}
+}
+
 // convenience methods for writing key-value properties while building objects
 
 func (e *Builder) NullProp(k string)                        { e.Key(k); e.Null() }
@@ -303,6 +356,7 @@ func (e *Builder) UintProp(k string, v uint64, bitsize int) { e.Key(k); e.Uint(v
 func (e *Builder) FloatProp(k string, f float64, bits int)  { e.Key(k); e.Float(f, bits) }
 func (e *Builder) StrProp(k, v string)                      { e.Key(k); e.Str(v) }
 func (e *Builder) BlobProp(k string, v []byte)              { e.Key(k); e.Blob(v) }
+func (e *Builder) AnyProp(k string, v interface{})          { e.Key(k); e.Any(v) }
 func (e *Builder) StartObjectProp(k string)                 { e.Key(k); e.StartObject() }
 func (e *Builder) StartArrayProp(k string)                  { e.Key(k); e.StartArray() }
 
