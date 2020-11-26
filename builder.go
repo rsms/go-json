@@ -332,6 +332,8 @@ func (e *Builder) Any(v interface{}) {
 	default:
 		if v == nil {
 			e.Null()
+		} else if st, ok := v.(interface{ BuildJSON(*Builder) }); ok {
+			st.BuildJSON(e)
 		} else if st, ok := v.(interface{ MarshalJSON() ([]byte, error) }); ok {
 			json, err := st.MarshalJSON()
 			if err != nil {
@@ -342,7 +344,9 @@ func (e *Builder) Any(v interface{}) {
 		} else {
 			e.startChunk(builderValue)
 			enc := json.NewEncoder(&e.Buffer)
+			enc.SetIndent("", e.Indent)
 			e.setError(enc.Encode(v))
+			// Note: I can't figure out how to make json.Encoder not to write a trailing linebreak.
 		}
 	}
 }

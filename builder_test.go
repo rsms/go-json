@@ -6,6 +6,18 @@ import (
 	"time"
 )
 
+type ExampleVec3 struct {
+	x, y, z float64
+}
+
+func (v ExampleVec3) BuildJSON(b *Builder) {
+	b.StartArray()
+	b.Float(v.x, 64)
+	b.Float(v.y, 64)
+	b.Float(v.z, 64)
+	b.EndArray()
+}
+
 func ExampleBuilder() {
 	var b Builder
 	b.Indent = "  " // enable pretty-printing
@@ -45,7 +57,8 @@ func ExampleBuilder() {
 	b.AnyProp("any.float64", float64(1.23))
 	b.AnyProp("any.string", "ett två tre")
 	b.AnyProp("any.blob", []byte("un dos tres"))
-	b.AnyProp("any.custom", time.Unix(123, 0)) // uses MarshalJSON or encoding/json.Encoder
+	b.AnyProp("any.time", time.Unix(123, 0)) // uses MarshalJSON or encoding/json.Encoder
+	b.AnyProp("any.vec3", ExampleVec3{1.2, 3.4, 5.6})
 
 	b.EndObject()
 
@@ -77,6 +90,11 @@ func ExampleBuilder() {
 	//   "any.float64": 1.23,
 	//   "any.string": "ett två tre",
 	//   "any.blob": "dW4gZG9zIHRyZXM",
-	//   "any.custom": "1969-12-31T16:02:03-08:00"
+	//   "any.time": "1969-12-31T16:02:03-08:00",
+	//   "any.vec3": [
+	//     1.2,
+	//     3.4,
+	//     5.6
+	//   ]
 	// }
 }
